@@ -1,17 +1,17 @@
 module ccSandpiles
-	import Base.show, Base.maximum
+	import Base.show, Base.maximum, Base.size, Base.+, Base.*
 	export Sandpile, topple!, deposit!, fullyTopple!
 
 	mutable struct Sandpile
 		# Multidim. Array for holding pile data
 		pile::Array{UInt16, 2}
 		# Explicit constructor
-		function Sandpile(p::Array{Int, 2})
+		function Sandpile(p::Array{t, 2}) where t <: Integer
 			local i, j
 			local q = similar(p, UInt16)
 			for i = 1:size(p)[1]
 				for j = 1:size(p)[2]
-					p[i, j] > 3 ? throw(ArgumentError("Initial piles must be fully toppled!\n")) : q[i, j] = p[i, j]
+					q[i, j] = p[i, j]
 				end
 			end
 			new(q)
@@ -60,4 +60,12 @@ module ccSandpiles
 	maximum(p::Sandpile) = maximum(p.pile)
 
 	fullyTopple!(p::Sandpile, printout::Bool = false) = while maximum(p) > 3 topple!(p, printout) end
+
+	size(p::Sandpile) = size(p.pile)
+
+	+(p1::Sandpile, p2::Sandpile) = size(p1) == size(p2) ? Sandpile(p1.pile + p2.pile) : throw(ErrorException("The two piles must be the same dimensions!\n"))
+
+	function *(n::t, p::Sandpile) where t <: Integer
+		Sandpile(UInt16(n) * p.pile)
+	end
 end
