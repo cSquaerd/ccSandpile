@@ -1,7 +1,8 @@
 module ccSandpiles
 	import Base.show, Base.maximum, Base.size, Base.+, Base.*
-	export Sandpile, topple!, deposit!, fullyTopple!
+	export Sandpile, topple!, deposit!, fullyTopple!, isStable
 
+	"Sandpile struct with two constructors"
 	mutable struct Sandpile
 		# Multidim. Array for holding pile data
 		pile::Array{UInt16, 2}
@@ -20,20 +21,40 @@ module ccSandpiles
 		Sandpile(w::Integer, h::Integer, empty::Bool=true) = empty ? new(zeros(UInt16, UInt(w), UInt(h))) : new(Array{UInt16}(undef, UInt(w), UInt(h)))
 	end
 
+	"Determine the maximum cell value in a sandpile"
+	maximum(p::Sandpile) = maximum(p.pile)
+	
+	"Determine the dimensions of the sandpile"
+	size(p::Sandpile) = size(p.pile)
+
+	"Sandpile show function with color coding"
 	function Base.show(io::IO, p::Sandpile)
 		local i, j
 		local saturated = false
 		local colors = [:cyan, :blue, :magenta, :red]
-		for i = 1:size(p.pile)[1]
-			for j = 1:size(p.pile)[2]
+		#Display size is limited to 40x24 as to fit most terminals
+		local lowi = size(p)[1] < 24 ? 1 : div(size(p)[1], 2) - 11
+		local highi = size(p)[1] < 24 ? size(p)[1] : div(size(p)[1], 2) + 11
+		local oversizedi = size(p)[1] > 24
+		local lowj = size(p)[2] < 40 ? 1 : div(size(p)[2], 2) - 19
+		local highj = size(p)[2] < 40 ? size(p)[2] : div(size(p)[2], 2) + 19
+		local oversizedj = size(p)[2] > 40
+		for i = lowi:highi
+			oversizedi && i == lowi ? println("    …") : print("")
+			for j = lowj:highj
+				j == lowj ? (oversizedj && i == div(size(p)[1], 2) ? print("… ") : print("  ")) : print("")
 				saturated = p.pile[i,j] > 3
 				printstyled(io, p.pile[i,j], bold = saturated, color = !saturated ? colors[p.pile[i,j] + 1] : :light_black)
-				j == size(p.pile)[2] ? print('\n') : print(' ')
+				j == highj ? (oversizedj && i == div(size(p)[1], 2) ? print(" …\n") : (print("\n"))) : print(" ")
 			end
+			oversizedi && i == highi ? print("    …") : print("")
 		end
+		oversizedi || oversizedj ? print("\n(Note: Only the center of the sandpile is shown.)") : print("")
 	end
 
-	function topple!(p::Sandpile, printout::Bool = false)
+	"Do one pass of toppling a sandpile"
+	function topple!(p::Sandpile)
+		# Determine which cells need to be toppled
 		local sites = Array{Array{Integer, 1}}(undef, 0)
 		local i, j
 		for i = 1:size(p.pile)[1]
@@ -41,31 +62,45 @@ module ccSandpiles
 				p.pile[i,j] > 3 ? push!(sites, [i,j]) : continue
 			end
 		end
-		if length(sites) == 0 return end
+		if length(sites) == 0 return p end
+		# Topple cells in need
 		local x, y
 		for i = 1:length(sites)
 			y = sites[i][1]
 			x = sites[i][2]
 			p.pile[y, x] -= 4
+			# Each neighbor is tested first as to not go out of bounds
 			if y - 1 > 0 p.pile[y - 1, x] += 1 end
 			if y < size(p.pile)[1] p.pile[y + 1, x] += 1 end
 			if x - 1 > 0 p.pile[y, x - 1] += 1 end
 			if x < size(p.pile)[2] p.pile[y, x + 1] += 1 end
 		end
-		if printout println(p) end
+		p
+	end
+	
+	"Deposit some sand somewhere on a sandpile"
+	function deposit!(p::Sandpile, amount::Integer, y::Integer, x::Integer)
+		p.pile[y, x] += amount
+		p
 	end
 
-	deposit!(p::Sandpile, amount::Integer, y::Integer, x::Integer) = p.pile[y, x] += amount
+	"Repeatedly topple the sandpile until it is stable"
+	function fullyTopple!(p::Sandpile)
+		while maximum(p) > 3
+			topple!(p)
+		end
+		p
+	end
 
-	maximum(p::Sandpile) = maximum(p.pile)
 
-	fullyTopple!(p::Sandpile, printout::Bool = false) = while maximum(p) > 3 topple!(p, printout) end
-
-	size(p::Sandpile) = size(p.pile)
-
+	"Add cell-wise two sandpiles together"
 	+(p1::Sandpile, p2::Sandpile) = size(p1) == size(p2) ? Sandpile(p1.pile + p2.pile) : throw(ErrorException("The two piles must be the same dimensions!\n"))
 
+	"Scalar-multiply a sandpile"
 	function *(n::t, p::Sandpile) where t <: Integer
 		Sandpile(UInt16(n) * p.pile)
 	end
+
+	"Determine if a sandpile is stable"
+	isStable(p::Sandpile) = maximum(p) < 4
 end
