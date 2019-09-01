@@ -1,5 +1,5 @@
 module ccSandpiles
-	import Base.show, Base.maximum, Base.size, Base.+, Base.*, Images.Gray, Images.colorview, Images.RGB
+	import Base.show, Base.maximum, Base.size, Base.+, Base.*, Images.Gray, Images.colorview, Images.RGB, Distributed
 	export Sandpile, topple!, deposit!, fullyTopple!, isStable, toImageGray, toImageRGB, toImageIndexed
 
 	"Sandpile struct with two constructors"
@@ -57,8 +57,8 @@ module ccSandpiles
 		# Determine which cells need to be toppled
 		local sites = Array{Array{Integer, 1}}(undef, 0)
 		local i, j
-		for i = 1:size(p.pile)[1]
-			for j = 1:size(p.pile)[2]
+		for i = 1:size(p)[1]
+			for j = 1:size(p)[2]
 				p.pile[i,j] > 3 ? push!(sites, [i,j]) : continue
 			end
 		end
@@ -71,9 +71,9 @@ module ccSandpiles
 			p.pile[y, x] -= 4
 			# Each neighbor is tested first as to not go out of bounds
 			if y - 1 > 0 p.pile[y - 1, x] += 1 end
-			if y < size(p.pile)[1] p.pile[y + 1, x] += 1 end
+			if y < size(p)[1] p.pile[y + 1, x] += 1 end
 			if x - 1 > 0 p.pile[y, x - 1] += 1 end
-			if x < size(p.pile)[2] p.pile[y, x + 1] += 1 end
+			if x < size(p)[2] p.pile[y, x + 1] += 1 end
 		end
 		p
 	end
@@ -91,7 +91,6 @@ module ccSandpiles
 		end
 		p
 	end
-
 
 	"Add cell-wise two sandpiles together"
 	+(p1::Sandpile, p2::Sandpile) = size(p1) == size(p2) ? Sandpile(p1.pile + p2.pile) : throw(ErrorException("The two piles must be the same dimensions!\n"))
