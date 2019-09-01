@@ -1,5 +1,7 @@
 module ccSandpiles
-	import Base.show, Base.maximum, Base.size, Base.+, Base.*, Images.Gray, Images.colorview, Images.RGB, Distributed
+	import Base.show, Base.maximum, Base.size, Base.+, Base.*
+	import Images.Gray, Images.colorview, Images.RGB
+	#import Distributed.pmap
 	export Sandpile, topple!, deposit!, fullyTopple!, isStable, toImageGray, toImageRGB, toImageIndexed
 
 	"Sandpile struct with two constructors"
@@ -55,13 +57,7 @@ module ccSandpiles
 	"Do one pass of toppling a sandpile"
 	function topple!(p::Sandpile)
 		# Determine which cells need to be toppled
-		local sites = Array{Array{Integer, 1}}(undef, 0)
-		local i, j
-		for i = 1:size(p)[1]
-			for j = 1:size(p)[2]
-				p.pile[i,j] > 3 ? push!(sites, [i,j]) : continue
-			end
-		end
+		local sites = findall(map(n -> n > 3, p.pile))
 		if length(sites) == 0 return p end
 		# Topple cells in need
 		local x, y
@@ -69,11 +65,14 @@ module ccSandpiles
 			y = sites[i][1]
 			x = sites[i][2]
 			p.pile[y, x] -= 4
-			# Each neighbor is tested first as to not go out of bounds
-			if y - 1 > 0 p.pile[y - 1, x] += 1 end
-			if y < size(p)[1] p.pile[y + 1, x] += 1 end
-			if x - 1 > 0 p.pile[y, x - 1] += 1 end
-			if x < size(p)[2] p.pile[y, x + 1] += 1 end
+			local neighborsy = [y - 1, y + 1, y, y]
+			local neighborsx = [x, x, x - 1, x + 1]
+			for n = 1:4
+				# Each neighbor is tested first as to not go out of bounds
+				if isassigned(p.pile, neighborsy[n], neighborsx[n])
+					p.pile[neighborsy[n], neighborsx[n]] += 1
+				end
+			end
 		end
 		p
 	end
@@ -104,7 +103,7 @@ module ccSandpiles
 	isStable(p::Sandpile) = maximum(p) < 4
 
 	"Convert a sandpile to a grayscale image"
-	toImageGray(p::Sandpile) = Gray.(map(n -> round(n / 3, digits = 2), p.pile))
+	toImageGray(p::Sandpile) = Gray.(map(n -> clamp(round(n / 3, digits = 2), 0.0, 1.0), p.pile))
 
 	"Convert a sandpile to an RGB image"
 	function toImageRGB(p::Sandpile, r::Float64 = 0.75, g::Float64 = 0.0, b::Float64 = 1.0)
@@ -121,5 +120,35 @@ module ccSandpiles
 			RGB(1.0, 0.25, 0.25),
 			RGB(1.0, 1.0, 0.25)
 		]
-	) = map(n -> colors[n + 1], p.pile)
+		) = map(n -> n < 4 ? colors[n + 1] : RGB(0.2, clamp(0.0001 * n, 0.2, 1.0), 0.2), p.pile)
+	
+	"""
+	function toppleOne!(c, p::Sandpile)
+		println(c)
+		p.pile[c] -= 4;
+		local y = c[1]
+		local x = c[2]
+		println(p.pile[c])
+		if y - 1 > 0 p.pile[y - 1, x] += 1 end
+		if y < size(p)[1] p.pile[y + 1, x] += 1 end
+		if x - 1 > 0 p.pile[y, x - 1] += 1 end
+		if x < size(p)[2] p.pile[y, x + 1] += 1 end
+	end
+
+	function dTopple!(p::Sandpile)
+		local sites = findall(
+			pmap(
+				n -> n > 3,
+				p.pile
+			)
+		)
+		println(sites)
+		if length(sites) == 0 println("No sites!"); return p end
+		pmap(
+			c -> toppleOne!(c, p),
+			sites
+		)
+		p
+	end
+	"""
 end
