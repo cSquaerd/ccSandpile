@@ -116,7 +116,7 @@ module ccSandpiles
 	"Convert a sandpile to an indexed-RGB image"
 	toImageIndexed(
 		p::Sandpile,
-		colors::Array{RGB, 1} = [
+		colors::Array{RGB{t}, 1} where t <: AbstractFloat = [
 			RGB(0.2, 0.2, 0.2),
 			RGB(0.25, 0.25, 1.0),
 			RGB(1.0, 0.25, 0.25),
