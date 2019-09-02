@@ -68,10 +68,7 @@ module ccSandpiles
 			local neighborsy = [y - 1, y + 1, y, y]
 			local neighborsx = [x, x, x - 1, x + 1]
 			for n = 1:4
-				# Each neighbor is tested first as to not go out of bounds
-				if isassigned(p.pile, neighborsy[n], neighborsx[n])
-					p.pile[neighborsy[n], neighborsx[n]] += 1
-				end
+				try p.pile[neighborsy[n], neighborsx[n]] += 1 catch; continue end
 			end
 		end
 		p
