@@ -46,8 +46,8 @@ module ccSandpiles
 			for j = lowj:highj
 				j == lowj ? (oversizedj && i == div(size(p)[1], 2) ? print("… ") : print("  ")) : print("")
 				saturated = p.pile[i,j] > 3
-				printstyled(io, p.pile[i,j], bold = saturated, color = !saturated ? colors[p.pile[i,j] + 1] : :light_black)
-				j == highj ? (oversizedj && i == div(size(p)[1], 2) ? print(" …\n") : (print("\n"))) : print(" ")
+				printstyled(p.pile[i,j], bold = saturated, color = !saturated ? colors[p.pile[i,j] + 1] : :light_black)
+				j == highj ? (oversizedj && i == div(size(p)[1], 2) ? println(" …") : (println(""))) : print(" ")
 			end
 			oversizedi && i == highi ? print("    …") : print("")
 		end
